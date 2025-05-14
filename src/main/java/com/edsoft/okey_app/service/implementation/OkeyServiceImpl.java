@@ -1,5 +1,8 @@
 package com.edsoft.okey_app.service.implementation;
 
+import com.edsoft.okey_app.exception.BestPlayerCalculationException;
+import com.edsoft.okey_app.exception.GamePreparationException;
+import com.edsoft.okey_app.exception.GameStartException;
 import com.edsoft.okey_app.exception.InvalidGameSetupException;
 import com.edsoft.okey_app.manager.analyzer.GameAnalyzer;
 import com.edsoft.okey_app.manager.distribution.RandomTileDistribution;
@@ -17,11 +20,12 @@ import com.edsoft.okey_app.manager.player.PlayerManager;
 import com.edsoft.okey_app.manager.player.PlayerPrint;
 import com.edsoft.okey_app.model.Player;
 import com.edsoft.okey_app.model.Tile;
-import com.edsoft.okey_app.response.BestPlayerInfo;
 import com.edsoft.okey_app.response.GamePrepareInfo;
 import com.edsoft.okey_app.response.GameStartInfo;
 import com.edsoft.okey_app.service.OkeyService;
 import lombok.AllArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -30,103 +34,117 @@ import java.util.List;
 @AllArgsConstructor
 public class OkeyServiceImpl implements OkeyService {
 
+    private static final Logger logger = LoggerFactory.getLogger(OkeyServiceImpl.class);
+
     @Override
     public GamePrepareInfo getGamePrepareInfo() {
-        TileManager tileManager = new TileGenerator();
-        List<Tile> tiles = tileManager.generateTiles();
+        try {
+            TileManager tileManager = new TileGenerator();
+            List<Tile> tiles = tileManager.generateTiles();
 
-        TilePrint tilePrint = new TilePrint(tileManager);
-        tilePrint.printTilesSize(tiles);
+            TilePrint tilePrint = new TilePrint(tileManager);
+            tilePrint.printTilesSize(tiles);
 
-        int tileSize = tilePrint.tileSize(tiles);
+            int tileSize = tilePrint.tileSize(tiles);
 
-        PlayerManager playerManager = new PlayerGenerator();
-        List<Player> players = playerManager.generatePlayers(4);
+            PlayerManager playerManager = new PlayerGenerator();
+            List<Player> players = playerManager.generatePlayers(4);
 
-        PlayerPrint playerPrint = new PlayerPrint(playerManager, tilePrint);
-        playerPrint.printPlayerSize(players);
+            PlayerPrint playerPrint = new PlayerPrint(playerManager, tilePrint);
+            playerPrint.printPlayerSize(players);
 
-        int playerSize = playerPrint.playerSize(players);
+            int playerSize = playerPrint.playerSize(players);
 
-        if (tileSize != 106 || playerSize != 4) {
-            throw new InvalidGameSetupException("Invalid Game Start : \n tileSize=" + tileSize + ", playerSize=" + playerSize);
+            if (tileSize != 106 || playerSize != 4) {
+                throw new InvalidGameSetupException("Invalid Game Start: tileSize=" + tileSize + ", playerSize=" + playerSize);
+            }
+
+            return new GamePrepareInfo(tileSize, playerSize);
+        } catch (InvalidGameSetupException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new GamePreparationException("An error occurred while preparing the game", e);
         }
-
-        return new GamePrepareInfo(tileSize, playerSize);
     }
 
     @Override
     public GameStartInfo gameStart() {
-        TileManager tileManager = new TileGenerator();
-        List<Tile> tiles = tileManager.generateTiles();
+        try {
+            TileManager tileManager = new TileGenerator();
+            List<Tile> tiles = tileManager.generateTiles();
 
-        TilePrint tilePrint = new TilePrint(tileManager);
-        tilePrint.printTilesSize(tiles);
+            TilePrint tilePrint = new TilePrint(tileManager);
+            tilePrint.printTilesSize(tiles);
 
-        PlayerManager playerManager = new PlayerGenerator();
-        List<Player> players = playerManager.generatePlayers(4);
+            PlayerManager playerManager = new PlayerGenerator();
+            List<Player> players = playerManager.generatePlayers(4);
 
-        PlayerPrint playerPrint = new PlayerPrint(playerManager, tilePrint);
-        playerPrint.printPlayerSize(players);
+            PlayerPrint playerPrint = new PlayerPrint(playerManager, tilePrint);
+            playerPrint.printPlayerSize(players);
 
-        TileDistributionStrategy distributionStrategy = new RandomTileDistribution(playerPrint);
-        players = distributionStrategy.distributeTiles(players, tiles);
+            TileDistributionStrategy distributionStrategy = new RandomTileDistribution(playerPrint);
+            players = distributionStrategy.distributeTiles(players, tiles);
 
-        IndicatorManager indicatorManager = new IndicatorSelector();
-        IndicatorPrint indicatorPrint = new IndicatorPrint(indicatorManager);
-        IndicatorResult indicatorResult = indicatorManager.selectIndicator(tiles);
+            IndicatorManager indicatorManager = new IndicatorSelector();
+            IndicatorPrint indicatorPrint = new IndicatorPrint(indicatorManager);
+            IndicatorResult indicatorResult = indicatorManager.selectIndicator(tiles);
 
-        indicatorPrint.print(indicatorResult);
+            indicatorPrint.print(indicatorResult);
 
-        return new GameStartInfo(indicatorResult.getOkey(), indicatorResult.getIndicator());
+            return new GameStartInfo(indicatorResult.getOkey(), indicatorResult.getIndicator());
+        } catch (Exception e) {
+            throw new GameStartException("An error occurred while starting the game", e);
+        }
     }
 
     @Override
     public Integer getBestPlayer() {
-        //1.Taşlar oluşturuluyor
-        TileManager tileManager = new TileGenerator();
-        List<Tile> tiles = tileManager.generateTiles();
+        try {
+            TileManager tileManager = new TileGenerator();
+            List<Tile> tiles = tileManager.generateTiles();
 
-        System.out.println("---------------------------");
-        System.out.println("Tiles have been created");
+            logger.info("---------------------------");
+            logger.info("Tiles have been created");
 
-        TilePrint tilePrint = new TilePrint(tileManager);
+            TilePrint tilePrint = new TilePrint(tileManager);
+            logger.info("---------------------------");
+            tilePrint.printTilesSize(tiles);
+            logger.info("---------------------------");
 
-        System.out.println("---------------------------");
-        tilePrint.printTilesSize(tiles);
-        System.out.println("---------------------------");
+            PlayerManager playerManager = new PlayerGenerator();
+            List<Player> players = playerManager.generatePlayers(4);
 
-        PlayerManager playerManager = new PlayerGenerator();
-        List<Player> players = playerManager.generatePlayers(4);
+            logger.info("---------------------------");
+            PlayerPrint playerPrint = new PlayerPrint(playerManager, tilePrint);
 
-        System.out.println("---------------------------");
-        PlayerPrint playerPrint = new PlayerPrint(playerManager, tilePrint);
+            TileDistributionStrategy distributionStrategy = new RandomTileDistribution(playerPrint);
+            players = distributionStrategy.distributeTiles(players, tiles);
 
-        TileDistributionStrategy distributionStrategy = new RandomTileDistribution(playerPrint);
-        players = distributionStrategy.distributeTiles(players, tiles);
+            IndicatorManager indicatorManager = new IndicatorSelector();
+            IndicatorPrint indicatorPrint = new IndicatorPrint(indicatorManager);
+            IndicatorResult indicatorResult = indicatorManager.selectIndicator(tiles);
 
-        IndicatorManager indicatorManager = new IndicatorSelector();
-        IndicatorPrint indicatorPrint = new IndicatorPrint(indicatorManager);
-        IndicatorResult indicatorResult = indicatorManager.selectIndicator(tiles);
+            indicatorPrint.print(indicatorResult);
+            logger.info("---------------------------");
 
-        indicatorPrint.print(indicatorResult);
-        System.out.println("---------------------------");
+            playerPrint.printPlayerSize(players);
 
-        playerPrint.printPlayerSize(players);
+            TileSeriesPlacer tileSeriesFinder = new TileSeriesPlacer(indicatorResult.getOkey(), indicatorResult.getIndicator());
+            GameAnalyzer analyzer = new GameAnalyzer(indicatorResult.getOkey(), indicatorResult.getIndicator());
 
-        TileSeriesPlacer tileSeriesFinder = new TileSeriesPlacer(indicatorResult.getOkey(), indicatorResult.getIndicator());
-        GameAnalyzer analyzer = new GameAnalyzer(indicatorResult.getOkey(), indicatorResult.getIndicator());
+            for (Player player : players) {
+                logger.info("---------------------------------");
+                logger.info("\nPlayer {}\n", player.getId());
+                tileSeriesFinder.printSeries(tileSeriesFinder.findAllValidSets(player.getHand().getTiles()));
+                logger.info("---------------------------------");
+            }
 
-        for (Player player : players) {
-            System.out.println("---------------------------------");
-            System.out.println("\nPlayer " + player.getId() + "\n");
-            tileSeriesFinder.printSeries(tileSeriesFinder.findAllValidSets(player.getHand().getTiles()));
-            System.out.println("---------------------------------");
+            Integer bestPlayer = analyzer.determineBestPlayer(players);
+            logger.info("Best Player ID : Player {}", bestPlayer);
+
+            return bestPlayer;
+        } catch (Exception e) {
+            throw new BestPlayerCalculationException("An error occurred while calculating the best player", e);
         }
-
-        Integer bestPlayer = analyzer.determineBestPlayer(players);
-        System.out.println("Best Player ID : Player " + bestPlayer);
-
-        return bestPlayer;
     }
 }
