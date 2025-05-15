@@ -39,30 +39,36 @@ public class OkeyServiceImpl implements OkeyService {
     @Override
     public GamePrepareInfo getGamePrepareInfo() {
         try {
+            logger.info("Game preparation started.");
+
             TileManager tileManager = new TileGenerator();
             List<Tile> tiles = tileManager.generateTiles();
+            logger.info("Tiles generated. Total tiles: {}", tiles.size());
 
             TilePrint tilePrint = new TilePrint(tileManager);
             tilePrint.printTilesSize(tiles);
-
             int tileSize = tilePrint.tileSize(tiles);
 
             PlayerManager playerManager = new PlayerGenerator();
             List<Player> players = playerManager.generatePlayers(4);
+            logger.info("Players generated. Total players: {}", players.size());
 
             PlayerPrint playerPrint = new PlayerPrint(playerManager, tilePrint);
             playerPrint.printPlayerSize(players);
-
             int playerSize = playerPrint.playerSize(players);
 
             if (tileSize != 106 || playerSize != 4) {
+                logger.warn("Invalid game setup. tileSize={}, playerSize={}", tileSize, playerSize);
                 throw new InvalidGameSetupException("Invalid Game Start: tileSize=" + tileSize + ", playerSize=" + playerSize);
             }
 
+            logger.info("Game preparation completed successfully.");
             return new GamePrepareInfo(tileSize, playerSize);
         } catch (InvalidGameSetupException e) {
+            logger.error("Game preparation failed due to invalid setup.", e);
             throw e;
         } catch (Exception e) {
+            logger.error("Unexpected error during game preparation.", e);
             throw new GamePreparationException("An error occurred while preparing the game", e);
         }
     }
@@ -70,29 +76,37 @@ public class OkeyServiceImpl implements OkeyService {
     @Override
     public GameStartInfo gameStart() {
         try {
+            logger.info("Game start process initiated.");
+
             TileManager tileManager = new TileGenerator();
             List<Tile> tiles = tileManager.generateTiles();
+            logger.info("Tiles generated. Total tiles: {}", tiles.size());
 
             TilePrint tilePrint = new TilePrint(tileManager);
             tilePrint.printTilesSize(tiles);
 
             PlayerManager playerManager = new PlayerGenerator();
             List<Player> players = playerManager.generatePlayers(4);
+            logger.info("Players generated. Total players: {}", players.size());
 
             PlayerPrint playerPrint = new PlayerPrint(playerManager, tilePrint);
             playerPrint.printPlayerSize(players);
 
             TileDistributionStrategy distributionStrategy = new RandomTileDistribution(playerPrint);
             players = distributionStrategy.distributeTiles(players, tiles);
+            logger.info("Tiles distributed to players.");
 
             IndicatorManager indicatorManager = new IndicatorSelector();
             IndicatorPrint indicatorPrint = new IndicatorPrint(indicatorManager);
             IndicatorResult indicatorResult = indicatorManager.selectIndicator(tiles);
-
             indicatorPrint.print(indicatorResult);
 
+            logger.info("Indicator selected. Okey: {}, Indicator: {}", indicatorResult.getOkey(), indicatorResult.getIndicator());
+
+            logger.info("Game start completed successfully.");
             return new GameStartInfo(indicatorResult.getOkey(), indicatorResult.getIndicator());
         } catch (Exception e) {
+            logger.error("Unexpected error during game start.", e);
             throw new GameStartException("An error occurred while starting the game", e);
         }
     }
@@ -100,32 +114,30 @@ public class OkeyServiceImpl implements OkeyService {
     @Override
     public Integer getBestPlayer() {
         try {
+            logger.info("Best player calculation started.");
+
             TileManager tileManager = new TileGenerator();
             List<Tile> tiles = tileManager.generateTiles();
-
-            logger.info("---------------------------");
-            logger.info("Tiles have been created");
+            logger.info("Tiles generated. Total tiles: {}", tiles.size());
 
             TilePrint tilePrint = new TilePrint(tileManager);
-            logger.info("---------------------------");
             tilePrint.printTilesSize(tiles);
-            logger.info("---------------------------");
 
             PlayerManager playerManager = new PlayerGenerator();
             List<Player> players = playerManager.generatePlayers(4);
+            logger.info("Players generated. Total players: {}", players.size());
 
-            logger.info("---------------------------");
             PlayerPrint playerPrint = new PlayerPrint(playerManager, tilePrint);
-
             TileDistributionStrategy distributionStrategy = new RandomTileDistribution(playerPrint);
             players = distributionStrategy.distributeTiles(players, tiles);
+            logger.info("Tiles distributed to players.");
 
             IndicatorManager indicatorManager = new IndicatorSelector();
             IndicatorPrint indicatorPrint = new IndicatorPrint(indicatorManager);
             IndicatorResult indicatorResult = indicatorManager.selectIndicator(tiles);
-
             indicatorPrint.print(indicatorResult);
-            logger.info("---------------------------");
+
+            logger.info("Indicator selected. Okey: {}, Indicator: {}", indicatorResult.getOkey(), indicatorResult.getIndicator());
 
             playerPrint.printPlayerSize(players);
 
@@ -134,7 +146,7 @@ public class OkeyServiceImpl implements OkeyService {
 
             for (Player player : players) {
                 logger.info("---------------------------------");
-                logger.info("\nPlayer {}\n", player.getId());
+                logger.info("Analyzing Player {}", player.getId());
                 tileSeriesFinder.printSeries(tileSeriesFinder.findAllValidSets(player.getHand().getTiles()));
                 logger.info("---------------------------------");
             }
@@ -142,8 +154,10 @@ public class OkeyServiceImpl implements OkeyService {
             Integer bestPlayer = analyzer.determineBestPlayer(players);
             logger.info("Best Player ID : Player {}", bestPlayer);
 
+            logger.info("Best player calculation completed.");
             return bestPlayer;
         } catch (Exception e) {
+            logger.error("Unexpected error during best player calculation.", e);
             throw new BestPlayerCalculationException("An error occurred while calculating the best player", e);
         }
     }
